@@ -8,10 +8,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 // Import routes
+// Import routes
 import authRoutes from './routes/auth.routes.js';
-import fileRoutes from './routes/file.routes.js';
-import dataRoutes from './routes/data.routes.js';
-import analyticsRoutes from './routes/analytics.routes.js';
+import habitRoutes from './routes/habit.routes.js';
+
 
 // Import middleware
 import { errorHandler } from './middlewares/error.middleware.js';
@@ -30,7 +30,22 @@ app.use(morgan('dev'));
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    // Check if origin matches allowed patterns
+    const allowedClientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    // Allow localhost on any port for development flexibility
+    const isLocalhost = /^http:\/\/localhost:\d+$/.test(origin);
+
+    if (origin === allowedClientUrl || isLocalhost) {
+      return callback(null, true);
+    } else {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+  },
   credentials: true
 }));
 
@@ -42,10 +57,10 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // API Routes
+// API Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/files', fileRoutes);
-app.use('/api/data', dataRoutes);
-app.use('/api/analytics', analyticsRoutes);
+app.use('/api/habits', habitRoutes);
+
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -56,24 +71,21 @@ app.get('/api/health', (req, res) => {
 app.use(errorHandler);
 
 // MongoDB connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/excel-manager', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => {
-  console.log('✅ MongoDB connected successfully');
-  
-  // Start server
-  const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/excel-manager', {})
+  .then(() => {
+    console.log('✅ MongoDB connected successfully');
+
+    // Start server
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+    });
+  })
+  .catch((error) => {
+    console.error('❌ MongoDB connection error:', error.message);
+    process.exit(1);
   });
-})
-.catch((error) => {
-  console.error('❌ MongoDB connection error:', error.message);
-  process.exit(1);
-});
 
 export default app;
 

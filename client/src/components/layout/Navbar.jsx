@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import { logout } from '../../store/slices/authSlice'
 import { useDarkMode } from '../../hooks/useDarkMode'
-import { Moon, Sun, LogOut, User, FileText, LayoutDashboard } from 'lucide-react'
+import { Moon, Sun, LogOut, User, FileText, LayoutDashboard, Clock } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 const Navbar = () => {
@@ -24,7 +24,7 @@ const Navbar = () => {
           <Link to="/" className="flex items-center space-x-2">
             <FileText className="w-8 h-8 text-primary-600" />
             <span className="text-xl font-bold text-gray-900 dark:text-white">
-              Excel Manager
+              HabitFlow
             </span>
           </Link>
 
@@ -39,12 +39,27 @@ const Navbar = () => {
                 <span>Dashboard</span>
               </Link>
               <Link
-                to="/files"
+                to="/habits"
                 className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
               >
                 <FileText className="w-4 h-4" />
-                <span>Files</span>
+                <span>Habits</span>
               </Link>
+              <Link
+                to="/tracker"
+                className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                <span>Tracker</span>
+              </Link>
+              <Link
+                to="/timer"
+                className="flex items-center space-x-1 text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+              >
+                <Clock className="w-4 h-4" />
+                <span>Timer</span>
+              </Link>
+
             </div>
           )}
 

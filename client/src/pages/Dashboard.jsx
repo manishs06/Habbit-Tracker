@@ -1,224 +1,175 @@
-import { useEffect, useState } from 'react'
-import { useDispatch } from 'react-redux'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState, useMemo } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
+import { fetchHabits, toggleHabitCompletion } from '../store/slices/habitSlice'
 import { motion } from 'framer-motion'
-import { FileText, Upload, BarChart3, TrendingUp, Clock, Activity } from 'lucide-react'
 import api from '../store/api'
-import FileUpload from '../components/files/FileUpload'
-import toast from 'react-hot-toast'
+
+import DashboardHeader from '../components/dashboard/DashboardHeader'
+import MonthlyHabitGrid from '../components/dashboard/MonthlyHabitGrid'
+import DashboardBottom from '../components/dashboard/DashboardBottom'
 
 const Dashboard = () => {
-  const navigate = useNavigate()
-  const [stats, setStats] = useState({
-    totalFiles: 0,
-    totalRows: 0,
-    totalSheets: 0,
-  })
-  const [recentFiles, setRecentFiles] = useState([])
-  const [activityLogs, setActivityLogs] = useState([])
-  const [loading, setLoading] = useState(true)
+  const dispatch = useDispatch()
+  const { items: habits } = useSelector((state) => state.habits)
+  const [monthLogs, setMonthLogs] = useState({}) // format: { "habitId_YYYY-MM-DD": status }
+  const [currentDate, setCurrentDate] = useState(new Date())
 
   useEffect(() => {
-    fetchDashboardData()
-  }, [])
+    dispatch(fetchHabits())
+  }, [dispatch])
 
-  const fetchDashboardData = async () => {
+  useEffect(() => {
+    fetchLogsForMonth()
+  }, [currentDate, habits]) // Refetch when month changes
+
+  const getDaysInMonth = (date) => {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  }
+
+  const fetchLogsForMonth = async () => {
     try {
-      const response = await api.get('/analytics/dashboard')
-      setStats(response.data.data.stats)
-      setRecentFiles(response.data.data.recentFiles || [])
-      setActivityLogs(response.data.data.activityLogs || [])
+      const year = currentDate.getFullYear()
+      const month = currentDate.getMonth()
+      const start = new Date(year, month, 1)
+      const end = new Date(year, month + 1, 0, 23, 59, 59) // End of month
+
+      const response = await api.get(`/habits/logs?start=${start.toISOString()}&end=${end.toISOString()}`)
+
+      if (response.data.success) {
+        // Transform to map
+        const map = {}
+        response.data.data.forEach(log => {
+          const d = new Date(log.date)
+          const dateStr = d.toISOString().split('T')[0] // YYYY-MM-DD
+          const key = `${log.habitId}_${dateStr}`
+          map[key] = log.status
+        })
+        setMonthLogs(map)
+      }
     } catch (error) {
-      toast.error('Failed to load dashboard data')
-    } finally {
-      setLoading(false)
+      console.error("Failed to fetch logs", error)
     }
   }
 
-  const statCards = [
-    {
-      title: 'Total Files',
-      value: stats.totalFiles,
-      icon: FileText,
-      color: 'bg-blue-500',
-      gradient: 'from-blue-500 to-blue-600',
-    },
-    {
-      title: 'Total Rows',
-      value: stats.totalRows.toLocaleString(),
-      icon: BarChart3,
-      color: 'bg-green-500',
-      gradient: 'from-green-500 to-green-600',
-    },
-    {
-      title: 'Total Sheets',
-      value: stats.totalSheets,
-      icon: TrendingUp,
-      color: 'bg-purple-500',
-      gradient: 'from-purple-500 to-purple-600',
-    },
-  ]
+  const handleToggle = async (habitId, dateStr) => {
+    // Optimistic update
+    const key = `${habitId}_${dateStr}`
+    const currentStatus = monthLogs[key]
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-      </div>
-    )
+    let nextStatus = null
+    if (!currentStatus) nextStatus = 'completed'
+    else if (currentStatus === 'completed') nextStatus = 'missed'
+    else if (currentStatus === 'missed') nextStatus = null
+
+    setMonthLogs(prev => {
+      const next = { ...prev }
+      if (nextStatus) next[key] = nextStatus
+      else delete next[key]
+      return next
+    })
+
+    try {
+      await dispatch(toggleHabitCompletion({ id: habitId, date: dateStr })).unwrap()
+    } catch (error) {
+      console.error("Toggle failed", error)
+      // Revert could happen here, simpler to just refetch or ignore for now
+      fetchLogsForMonth()
+    }
   }
 
+  // Stats Calculations
+  const stats = useMemo(() => {
+    const daysInMonth = getDaysInMonth(currentDate)
+    const daysPassed = Math.min(daysInMonth, new Date().getDate()) // Don't count future days for success rate? Or do we?
+    // Actually, "Success Rate" usually implies "of attempts made" or "of total possible up to now".
+    // Let's use "Up to today" for calculation.
+
+    let totalCompletions = 0
+    const activityMap = new Array(daysInMonth).fill(0)
+
+    // Iterate logs to count
+    Object.entries(monthLogs).forEach(([key, status]) => {
+      if (status === 'completed') {
+        totalCompletions++
+        const datePart = key.split('_')[1]
+        const dayIndex = new Date(datePart).getDate() - 1
+        if (dayIndex >= 0 && dayIndex < daysInMonth) {
+          activityMap[dayIndex]++
+        }
+      }
+    })
+
+    // Prepare line chart data
+    const activityData = activityMap.map((count, i) => ({
+      day: i + 1,
+      count
+    }))
+
+    // Total possible completions (Habits * Days Passed)
+    const totalPossible = habits.length * daysPassed
+    const successRate = totalPossible > 0 ? Math.round((totalCompletions / totalPossible) * 100) : 0
+
+    // Momentum: Last 3 days
+    let last3DaysCompleted = 0
+    let last3DaysPossible = habits.length * 3
+    const today = new Date()
+    for (let i = 0; i < 3; i++) {
+      const d = new Date()
+      d.setDate(today.getDate() - i)
+      const dateStr = d.toISOString().split('T')[0]
+      habits.forEach(h => {
+        if (monthLogs[`${h._id}_${dateStr}`] === 'completed') last3DaysCompleted++
+      })
+    }
+    const momentum = last3DaysPossible > 0 ? Math.round((last3DaysCompleted / last3DaysPossible) * 100) : 0
+
+    return {
+      successRate,
+      activityData,
+      totalCompletions,
+      momentum,
+      totalGoal: habits.length * daysInMonth // For bottom "Completed" text
+    }
+
+  }, [monthLogs, habits, currentDate])
+
   return (
-    <div className="space-y-8">
-      {/* Header */}
+    <div className="bg-[#1A1A1A] min-h-screen p-4 md:p-8 font-sans">
       <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col md:flex-row justify-between items-start md:items-center"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="max-w-[1400px] mx-auto space-y-0 shadow-2xl"
       >
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Dashboard
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Welcome back! Here's your overview.
-          </p>
-        </div>
-        <FileUpload onUploadSuccess={fetchDashboardData} />
+        {/* 1. Header */}
+        <DashboardHeader
+          year={currentDate.getFullYear()}
+          month={currentDate.toLocaleString('default', { month: 'long' })}
+          startDate={`${currentDate.toLocaleString('default', { month: 'long' })} 1, ${currentDate.getFullYear()}`}
+          endDate={`${currentDate.toLocaleString('default', { month: 'long' })} ${getDaysInMonth(currentDate)}, ${currentDate.getFullYear()}`}
+          totalDays={getDaysInMonth(currentDate)}
+          successRate={stats.successRate}
+          activityData={stats.activityData}
+        />
+
+        {/* 2. Grid */}
+        <MonthlyHabitGrid
+          habits={habits}
+          currentDate={currentDate}
+          logs={monthLogs}
+        // onToggle={handleToggle} // Disabled as per user request (Read-only)
+        />
+
+        {/* 3. Bottom */}
+        <DashboardBottom
+          monthlyProgress={stats.successRate}
+          normalizedProgress={stats.successRate + 5} // Mock difference for visual var
+          momentum={stats.momentum}
+          totalCompleted={stats.totalCompletions}
+          totalGoal={stats.totalGoal}
+        />
       </motion.div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {statCards.map((stat, index) => (
-          <motion.div
-            key={stat.title}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className="card relative overflow-hidden group"
-          >
-            <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${stat.gradient} opacity-10 rounded-full -mr-16 -mt-16 group-hover:opacity-20 transition-opacity`}></div>
-            <div className="relative">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    {stat.title}
-                  </p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-                    {stat.value}
-                  </p>
-                </div>
-                <div className={`${stat.color} p-3 rounded-lg`}>
-                  <stat.icon className="w-6 h-6 text-white" />
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Files */}
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.3 }}
-          className="card"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-              Recent Files
-            </h2>
-            <button
-              onClick={() => navigate('/files')}
-              className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400"
-            >
-              View all
-            </button>
-          </div>
-          {recentFiles.length > 0 ? (
-            <div className="space-y-3">
-              {recentFiles.map((file) => (
-                <motion.div
-                  key={file._id}
-                  whileHover={{ scale: 1.02 }}
-                  onClick={() => navigate(`/files/${file._id}`)}
-                  className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <FileText className="w-5 h-5 text-primary-600" />
-                      <div>
-                        <p className="font-medium text-gray-900 dark:text-white">
-                          {file.originalName}
-                        </p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {file.totalRows} rows • {file.totalColumns} columns
-                        </p>
-                      </div>
-                    </div>
-                    <Clock className="w-4 h-4 text-gray-400" />
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-              No files uploaded yet
-            </p>
-          )}
-        </motion.div>
-
-        {/* Activity Logs */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.4 }}
-          className="card"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center space-x-2">
-              <Activity className="w-5 h-5" />
-              <span>Recent Activity</span>
-            </h2>
-          </div>
-          {activityLogs.length > 0 ? (
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {activityLogs.map((log, index) => (
-                <div
-                  key={index}
-                  className="flex items-start space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
-                >
-                  <div className="mt-1">
-                    <div className="w-2 h-2 bg-primary-600 rounded-full"></div>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-900 dark:text-white">
-                      <span className="font-medium capitalize">{log.action}</span>{' '}
-                      {log.resourceType}
-                      {log.resourceId?.originalName && (
-                        <span className="text-gray-600 dark:text-gray-400">
-                          {' '}
-                          - {log.resourceId.originalName}
-                        </span>
-                      )}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      {new Date(log.createdAt).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-              No recent activity
-            </p>
-          )}
-        </motion.div>
-      </div>
     </div>
   )
 }
 
 export default Dashboard
-
