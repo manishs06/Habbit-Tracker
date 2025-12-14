@@ -27,12 +27,16 @@ mongodb+srv://excelmanager:Manishdb1@cluster0.mspp0ju.mongodb.net/excel-manager?
    - Authorize Railway to access your GitHub
    - Select repository: `manishs06/Habbit-Tracker`
 
-3. **Configure Service:**
-   - Railway will detect it's a Node.js app
-   - Click on the service → Settings
-   - Set **Root Directory**: `server`
-   - Build Command: `npm install` (usually auto-detected)
-   - Start Command: `npm start` (usually auto-detected)
+3. **Configure Service (IMPORTANT - Fix the build error):**
+   - Railway might show an error about not detecting the app
+   - Click on your service → **Settings** tab
+   - Scroll to **"Root Directory"** section
+   - Set **Root Directory**: `server` ⚠️ **This is critical!**
+   - Scroll to **"Build Command"** section
+   - Set Build Command: `npm install`
+   - Scroll to **"Start Command"** section  
+   - Set Start Command: `npm start`
+   - **Save changes** (Railway will auto-redeploy)
 
 4. **Add Environment Variables:**
    - Click on your service → Variables tab
