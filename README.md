@@ -323,6 +323,14 @@ Built with ❤️ using the MERN stack
    - Ensure `JWT_SECRET` is set
    - Check token expiration settings
 
+## 📚 Documentation
+
+Additional documentation files:
+
+- **[QUICK_DEPLOY.md](./QUICK_DEPLOY.md)** - Step-by-step deployment guide (MongoDB Atlas, Railway, Vercel)
+- **[ENV_VARIABLES.md](./ENV_VARIABLES.md)** - Complete environment variables reference
+- **[EXCEL_FORMAT.md](./EXCEL_FORMAT.md)** - Excel file format guide and best practices
+
 ## 📞 Support
 
 For support, please open an issue in the repository.

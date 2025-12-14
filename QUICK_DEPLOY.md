@@ -287,15 +287,37 @@ You'll see these 5 options:
 
 ## 🔧 Troubleshooting
 
+### Railway Build Error: "Railpack could not determine how to build"
+**Error:** `⚠ Script start.sh not found` or `✖ Railpack could not determine how to build the app`
+
+**Solution:**
+1. Go to Railway → Your Service → Settings
+2. Set **Root Directory**: `server`
+3. Set **Build Command**: `npm install`
+4. Set **Start Command**: `npm start`
+5. Save and redeploy
+
+### MongoDB Connection Error: `connect ECONNREFUSED ::1:27017`
+**Error:** Backend trying to connect to localhost instead of MongoDB Atlas
+
+**Solution:**
+1. Go to Railway → Your Service → Variables tab
+2. Add `MONGODB_URI` environment variable with your MongoDB Atlas connection string
+3. Make sure all required environment variables are set (see Quick Reference below)
+4. Railway will auto-redeploy after adding variables
+5. Check logs for: `✅ MongoDB connected successfully`
+
 ### Backend not connecting to MongoDB:
 - Check MongoDB Atlas IP whitelist (should be 0.0.0.0/0)
 - Verify connection string has correct password
 - Check database user permissions
+- Ensure `MONGODB_URI` environment variable is set in Railway
 
 ### Frontend can't reach backend:
-- Verify `VITE_API_URL` in Vercel matches Railway URL
+- Verify `VITE_API_URL` in Vercel matches Railway URL + `/api`
 - Check Railway `CLIENT_URL` matches Vercel URL
 - Check CORS settings in backend
+- Wait a few minutes for changes to propagate
 
 ### File uploads not working:
 - Check Railway disk space
@@ -347,5 +369,5 @@ Your app should now be live and accessible from anywhere!
 **Frontend URL**: `https://your-app.vercel.app`  
 **Backend URL**: `https://your-app.railway.app`
 
-Need help? Check the full [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed instructions.
+Need help? Check [ENV_VARIABLES.md](./ENV_VARIABLES.md) for environment variable details.
 
