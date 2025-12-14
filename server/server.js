@@ -71,7 +71,7 @@ app.get('/api/health', (req, res) => {
 app.use(errorHandler);
 
 // MongoDB connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/excel-manager', {})
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/habitflow', {})
   .then(() => {
     console.log('✅ MongoDB connected successfully');
 

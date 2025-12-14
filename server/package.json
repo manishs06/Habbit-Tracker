@@ -1,7 +1,7 @@
 {
-  "name": "excel-manager-server",
+  "name": "habitflow-server",
   "version": "1.0.0",
-  "description": "Backend server for Excel Manager MERN application",
+  "description": "Backend server for HabitFlow MERN habit tracker application",
   "main": "server.js",
   "type": "module",
   "scripts": {
@@ -9,10 +9,11 @@
     "dev": "nodemon server.js"
   },
   "keywords": [
-    "excel",
+    "habit-tracker",
     "mern",
     "mongodb",
-    "express"
+    "express",
+    "habits"
   ],
   "author": "",
   "license": "ISC",
