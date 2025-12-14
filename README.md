@@ -263,32 +263,14 @@ Habitify/
 
 ## 📦 Deployment
 
-### Frontend (Vercel/Netlify)
+For detailed deployment instructions, see **[QUICK_DEPLOY.md](./QUICK_DEPLOY.md)**.
 
-1. Build the frontend:
-   ```bash
-   cd client
-   npm run build
-   ```
+**Quick Overview:**
+- **Frontend:** Deploy to Vercel (free tier available)
+- **Backend:** Deploy to Railway (free $5 credit/month)
+- **Database:** Use MongoDB Atlas (free 512MB tier)
 
-2. Deploy the `dist` folder to Vercel or Netlify
-
-3. Update `VITE_API_URL` in production environment
-
-### Backend (Render/Railway/AWS)
-
-1. Set environment variables on your hosting platform
-
-2. Deploy the server folder
-
-3. Ensure MongoDB Atlas connection string is set
-
-### MongoDB Atlas Setup
-
-1. Create a MongoDB Atlas account
-2. Create a new cluster
-3. Get connection string
-4. Update `MONGODB_URI` in server `.env`
+The deployment guide includes step-by-step instructions for setting up MongoDB Atlas, deploying to Railway, and deploying to Vercel.
 
 ## 🤝 Contributing
 
@@ -323,13 +305,57 @@ Built with ❤️ using the MERN stack
    - Ensure `JWT_SECRET` is set
    - Check token expiration settings
 
+## ⚙️ Environment Variables
+
+### Backend Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `PORT` | No | `5000` | Server port number |
+| `NODE_ENV` | No | `development` | Environment mode |
+| `MONGODB_URI` | **Yes** | - | MongoDB connection string |
+| `JWT_SECRET` | **Yes** | - | Secret key for JWT (min 32 chars) |
+| `JWT_EXPIRE` | No | `7d` | JWT token expiration |
+| `MAX_FILE_SIZE` | No | `10485760` | Max file size in bytes (10MB) |
+| `CLIENT_URL` | **Yes** | - | Frontend URL for CORS |
+
+### Frontend Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `VITE_API_URL` | **Yes** | - | Backend API base URL |
+
+**Setup:**
+- Copy `server/env.example` to `server/.env` and fill in values
+- Copy `client/env.example` to `client/.env` and fill in values
+- Generate JWT_SECRET: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
+
+## 📄 Excel File Format
+
+### Supported Formats
+- **.xlsx** - Excel 2007+ (Recommended)
+- **.xls** - Excel 97-2003
+- **.csv** - Comma-separated values
+
+### Requirements
+- **Max file size:** 10MB
+- **Headers:** First row must contain column headers
+- **Data types:** Auto-detected (number, date, string)
+- **Multiple sheets:** Supported (each processed independently)
+
+### Best Practices
+- Use consistent data formats within columns
+- Format dates as dates (not text)
+- Use clear, descriptive header names
+- Avoid special characters in headers
+
+### Chart Requirements
+- **Line/Bar charts:** Need one categorical column (X-axis) and one numeric column (Y-axis)
+- **Pie charts:** Need one categorical column
+
 ## 📚 Documentation
 
-Additional documentation files:
-
-- **[QUICK_DEPLOY.md](./QUICK_DEPLOY.md)** - Step-by-step deployment guide (MongoDB Atlas, Railway, Vercel)
-- **[ENV_VARIABLES.md](./ENV_VARIABLES.md)** - Complete environment variables reference
-- **[EXCEL_FORMAT.md](./EXCEL_FORMAT.md)** - Excel file format guide and best practices
+- **[QUICK_DEPLOY.md](./QUICK_DEPLOY.md)** - Complete step-by-step deployment guide (MongoDB Atlas, Railway, Vercel)
 
 ## 📞 Support
 
