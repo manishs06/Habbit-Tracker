@@ -151,3 +151,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Thanks to all contributors who have helped shape this project
 - Inspired by various habit tracking methodologies
 - Built with ❤️ using the amazing MERN stack
+⁢
